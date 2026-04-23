@@ -6,7 +6,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
-const APIFY_ACTOR_ID = process.env.APIFY_ACTOR_ID || 'apidojo/tweet-scraper';
+const APIFY_ACTOR_ID = process.env.APIFY_ACTOR_ID || 'apidojo/twitter-scraper-lite';
 
 if (!APIFY_TOKEN) {
   console.error('ERROR: APIFY_TOKEN environment variable is not set!');
@@ -175,25 +175,26 @@ app.get('/health', (req, res) => {
 // ============================================
 
 // Core search logic (shared by POST and GET)
-async function handleSearch(query, maxResults = 100, since = null, debug = false) {
+async function handleSearch(query, maxResults = 100, since = null, sort = 'Latest') {
   if (!query) {
     throw new Error('Query parameter is required');
   }
 
+  const limit = Math.max(1, parseInt(maxResults) || 100);
   const actorInput = {
     searchTerms: [query],
-    maxItems: maxResults,
+    sort,
+    maxItems: limit,
     ...(since && { start: since })
   };
 
   const rawData = await scrapeTwitter(actorInput);
-  const tweets = formatTweets(rawData);
+  const tweets = formatTweets(rawData).slice(0, limit);
 
   return {
     success: true,
     count: tweets.length,
     tweets: tweets,
-    ...(debug && { rawSample: rawData[0] }),
     query: query,
     scrapedAt: new Date().toISOString()
   };
@@ -220,9 +221,9 @@ app.get('/api/search', async (req, res) => {
     const query = req.query.query;
     const maxResults = parseInt(req.query.maxResults) || 100;
     const since = req.query.since || null;
-    const debug = req.query.debug === 'raw';
+    const sort = req.query.sort || 'Latest';
 
-    const result = await handleSearch(query, maxResults, since, debug);
+    const result = await handleSearch(query, maxResults, since, sort);
     res.json(result);
   } catch (error) {
     console.error('Search error:', error);
@@ -239,9 +240,9 @@ app.get('/api/search/:query', async (req, res) => {
     const query = decodeURIComponent(req.params.query);
     const maxResults = parseInt(req.query.maxResults) || 100;
     const since = req.query.since || null;
-    const debug = req.query.debug === 'raw';
+    const sort = req.query.sort || 'Latest';
     
-    const result = await handleSearch(query, maxResults, since, debug);
+    const result = await handleSearch(query, maxResults, since, sort);
     res.json(result);
   } catch (error) {
     console.error('Search error:', error);

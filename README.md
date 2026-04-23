@@ -19,7 +19,7 @@ Free X (Twitter) data API using Apify - Save $100/month vs official X API
 ## Environment Variables
 
 - `APIFY_TOKEN` - Required. Your Apify API token.
-- `APIFY_ACTOR_ID` - Optional. Defaults to `apidojo/tweet-scraper`.
+- `APIFY_ACTOR_ID` - Optional. Defaults to `apidojo/twitter-scraper-lite`.
 - `PORT` - Optional. Zeabur usually provides this automatically.
 
 ## API Endpoints
