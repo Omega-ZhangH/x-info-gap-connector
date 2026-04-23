@@ -44,34 +44,87 @@ async function scrapeTwitter(actorInput) {
   }
 }
 
+function firstValue(...values) {
+  return values.find(value => value !== undefined && value !== null && value !== '');
+}
+
+function unwrapTweet(item) {
+  return firstValue(
+    item?.tweet,
+    item?.data?.tweet,
+    item?.data?.tweetResult?.result,
+    item?.tweetResult?.result,
+    item?.result,
+    item?.item,
+    item?.content?.itemContent?.tweet_results?.result,
+    item?.itemContent?.tweet_results?.result,
+    item
+  );
+}
+
+function unwrapAuthor(tweet) {
+  return firstValue(
+    tweet?.author,
+    tweet?.user,
+    tweet?.core?.user_results?.result,
+    tweet?.core?.user_results?.result?.legacy,
+    tweet?.user_results?.result,
+    tweet?.user_results?.result?.legacy
+  );
+}
+
+function getAuthorLegacy(author) {
+  return author?.legacy || author;
+}
+
+function formatTweet(item) {
+  const tweet = unwrapTweet(item);
+  const tweetLegacy = tweet?.legacy || tweet;
+  const author = unwrapAuthor(tweet);
+  const authorLegacy = getAuthorLegacy(author);
+  const id = firstValue(tweet?.id, tweet?.tweetId, tweet?.rest_id, tweetLegacy?.id_str);
+  const username = firstValue(author?.userName, authorLegacy?.screen_name, author?.screen_name);
+  const text = firstValue(tweet?.text, tweet?.full_text, tweetLegacy?.full_text, tweetLegacy?.text, '');
+
+  const formatted = {
+    id,
+    text,
+    author: {
+      username: username || 'unknown',
+      name: firstValue(author?.name, authorLegacy?.name, 'Unknown'),
+      verified: Boolean(firstValue(author?.isVerified, authorLegacy?.verified, author?.is_blue_verified, false)),
+      followers: firstValue(author?.followers, authorLegacy?.followers_count, author?.followers_count, 0)
+    },
+    createdAt: firstValue(tweet?.createdAt, tweet?.created_at, tweetLegacy?.created_at, new Date().toISOString()),
+    metrics: {
+      likes: firstValue(tweet?.likeCount, tweet?.favorite_count, tweetLegacy?.favorite_count, 0),
+      retweets: firstValue(tweet?.retweetCount, tweet?.retweet_count, tweetLegacy?.retweet_count, 0),
+      replies: firstValue(tweet?.replyCount, tweet?.reply_count, tweetLegacy?.reply_count, 0),
+      views: firstValue(tweet?.viewCount, tweet?.views, tweet?.views?.count, 0),
+      quotes: firstValue(tweet?.quoteCount, tweet?.quote_count, tweetLegacy?.quote_count, 0)
+    },
+    url: firstValue(
+      tweet?.url,
+      tweet?.twitterUrl,
+      id && username ? `https://twitter.com/${username}/status/${id}` : undefined
+    ),
+    entities: {
+      hashtags: firstValue(tweet?.entities?.hashtags, tweetLegacy?.entities?.hashtags, []).map(h => h.text || h.tag || h),
+      mentions: firstValue(tweet?.entities?.user_mentions, tweetLegacy?.entities?.user_mentions, []).map(m => m.screen_name || m.username || m),
+      urls: firstValue(tweet?.entities?.urls, tweetLegacy?.entities?.urls, []).map(u => u.expanded_url || u.url || u)
+    }
+  };
+
+  const hasTweetData = formatted.id || formatted.text || formatted.author.username !== 'unknown';
+  return hasTweetData ? formatted : null;
+}
+
 function formatTweets(rawData) {
   if (!Array.isArray(rawData)) {
     return [];
   }
 
-  return rawData.map(tweet => ({
-    id: tweet.id || tweet.tweetId,
-    text: tweet.text || tweet.full_text || '',
-    author: {
-      username: tweet.author?.userName || tweet.user?.screen_name || 'unknown',
-      name: tweet.author?.name || tweet.user?.name || 'Unknown',
-      verified: tweet.author?.isVerified || tweet.user?.verified || false,
-      followers: tweet.author?.followers || tweet.user?.followers_count || 0
-    },
-    createdAt: tweet.createdAt || tweet.created_at || new Date().toISOString(),
-    metrics: {
-      likes: tweet.likeCount || tweet.favorite_count || 0,
-      retweets: tweet.retweetCount || tweet.retweet_count || 0,
-      replies: tweet.replyCount || tweet.reply_count || 0,
-      views: tweet.viewCount || tweet.views || 0
-    },
-    url: tweet.url || `https://twitter.com/${tweet.author?.userName || 'i'}/status/${tweet.id || ''}`,
-    entities: {
-      hashtags: tweet.entities?.hashtags?.map(h => h.text) || [],
-      mentions: tweet.entities?.user_mentions?.map(m => m.screen_name) || [],
-      urls: tweet.entities?.urls?.map(u => u.expanded_url) || []
-    }
-  }));
+  return rawData.map(formatTweet).filter(Boolean);
 }
 
 // ============================================
