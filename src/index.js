@@ -114,6 +114,48 @@ function formatTweets(rawData) {
   return rawData.map(formatTweet).filter(Boolean);
 }
 
+function getErrorResponse(error) {
+  const message = error?.message || 'Unknown error';
+
+  if (message.includes('Monthly usage hard limit exceeded')) {
+    return {
+      status: 402,
+      body: {
+        success: false,
+        error: 'Apify monthly usage limit exceeded. Update APIFY_TOKEN or increase the Apify plan limit.'
+      }
+    };
+  }
+
+  if (message.includes('user-or-token-not-found')) {
+    return {
+      status: 401,
+      body: {
+        success: false,
+        error: 'APIFY_TOKEN is invalid or missing access to the selected actor.'
+      }
+    };
+  }
+
+  if (message.includes('record-not-found')) {
+    return {
+      status: 502,
+      body: {
+        success: false,
+        error: 'Configured Apify actor was not found. Check APIFY_ACTOR_ID.'
+      }
+    };
+  }
+
+  return {
+    status: 500,
+    body: {
+      success: false,
+      error: message
+    }
+  };
+}
+
 // ============================================
 // ROOT ENDPOINT (Health Check)
 // ============================================
@@ -195,10 +237,8 @@ app.post('/api/search', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    const errorResponse = getErrorResponse(error);
+    res.status(errorResponse.status).json(errorResponse.body);
   }
 });
 
@@ -214,10 +254,8 @@ app.get('/api/search', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    const errorResponse = getErrorResponse(error);
+    res.status(errorResponse.status).json(errorResponse.body);
   }
 });
 
@@ -233,10 +271,8 @@ app.get('/api/search/:query', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    const errorResponse = getErrorResponse(error);
+    res.status(errorResponse.status).json(errorResponse.body);
   }
 });
 
@@ -277,10 +313,8 @@ app.post('/api/user/:username', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('User tweets error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    const errorResponse = getErrorResponse(error);
+    res.status(errorResponse.status).json(errorResponse.body);
   }
 });
 
@@ -294,10 +328,8 @@ app.get('/api/user/:username', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('User tweets error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    const errorResponse = getErrorResponse(error);
+    res.status(errorResponse.status).json(errorResponse.body);
   }
 });
 
@@ -343,10 +375,8 @@ app.post('/api/users/batch', async (req, res) => {
 
   } catch (error) {
     console.error('Batch user error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    const errorResponse = getErrorResponse(error);
+    res.status(errorResponse.status).json(errorResponse.body);
   }
 });
 
