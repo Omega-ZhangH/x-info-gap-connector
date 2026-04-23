@@ -1,0 +1,12 @@
+node_modules/
+package-lock.json
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+.zeabur/
