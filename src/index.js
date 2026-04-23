@@ -94,7 +94,7 @@ app.get('/', (req, res) => {
       search: {
         method: 'POST',
         path: '/api/search',
-        note: 'Also available as GET /api/search/:query'
+        note: 'Also available as GET /api/search/:query and GET /api/search?query=...'
       },
       user: {
         method: 'POST',
@@ -160,7 +160,25 @@ app.post('/api/search', async (req, res) => {
   }
 });
 
-// ✨ NEW: GET endpoint
+// GET endpoint with query parameter, e.g. /api/search?query=openai
+app.get('/api/search', async (req, res) => {
+  try {
+    const query = req.query.query;
+    const maxResults = parseInt(req.query.maxResults) || 100;
+    const since = req.query.since || null;
+
+    const result = await handleSearch(query, maxResults, since);
+    res.json(result);
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// GET endpoint with path parameter, e.g. /api/search/openai
 app.get('/api/search/:query', async (req, res) => {
   try {
     const query = decodeURIComponent(req.params.query);

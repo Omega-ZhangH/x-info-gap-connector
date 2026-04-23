@@ -26,6 +26,7 @@ Free X (Twitter) data API using Apify - Save $100/month vs official X API
 
 - `POST /api/search` - Search tweets
 - `GET /api/search/:query` - Search tweets
+- `GET /api/search?query=...` - Search tweets
 - `POST /api/user/:username` - Get user timeline
 - `GET /api/user/:username` - Get user timeline
 - `POST /api/users/batch` - Batch fetch users
