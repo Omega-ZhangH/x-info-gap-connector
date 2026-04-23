@@ -6,6 +6,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
+const APIFY_ACTOR_ID = process.env.APIFY_ACTOR_ID || 'apidojo/tweet-scraper';
 
 if (!APIFY_TOKEN) {
   console.error('ERROR: APIFY_TOKEN environment variable is not set!');
@@ -18,8 +19,9 @@ if (!APIFY_TOKEN) {
 
 async function scrapeTwitter(actorInput) {
   try {
+    const actorId = APIFY_ACTOR_ID.replace('/', '~');
     const response = await fetch(
-      'https://api.apify.com/v2/acts/apify~twitter-scraper/run-sync-get-dataset-items?timeout=120',
+      `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?timeout=120`,
       {
         method: 'POST',
         headers: {
@@ -128,7 +130,7 @@ async function handleSearch(query, maxResults = 100, since = null) {
   const actorInput = {
     searchTerms: [query],
     maxItems: maxResults,
-    ...(since && { startDate: since })
+    ...(since && { start: since })
   };
 
   const rawData = await scrapeTwitter(actorInput);
@@ -187,7 +189,7 @@ async function handleUserTweets(username, maxResults = 50) {
   }
 
   const actorInput = {
-    handles: [username.replace('@', '')],
+    twitterHandles: [username.replace('@', '')],
     maxItems: maxResults
   };
 
@@ -255,7 +257,7 @@ app.post('/api/users/batch', async (req, res) => {
     const cleanUsernames = usernames.map(u => u.replace('@', ''));
 
     const actorInput = {
-      handles: cleanUsernames,
+      twitterHandles: cleanUsernames,
       maxItems: maxPerUser * cleanUsernames.length
     };
 
@@ -300,5 +302,6 @@ app.listen(PORT, () => {
   console.log(`   POST /api/user/:username      - Get user tweets`);
   console.log(`   GET  /api/user/:username      - Get user tweets (GET)`);
   console.log(`   POST /api/users/batch         - Batch user tweets`);
+  console.log(`🎭 Apify actor: ${APIFY_ACTOR_ID}`);
   console.log(`🔑 Apify token: ${APIFY_TOKEN ? 'Configured ✅' : 'Missing ❌'}`);
 });
