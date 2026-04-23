@@ -1,4 +1,5 @@
 import express from 'express';
+import { ApifyClient } from 'apify-client';
 import 'dotenv/config';
 
 const app = express();
@@ -13,31 +14,17 @@ if (!APIFY_TOKEN) {
   process.exit(1);
 }
 
+const apifyClient = new ApifyClient({ token: APIFY_TOKEN });
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
 
 async function scrapeTwitter(actorInput) {
   try {
-    const actorId = APIFY_ACTOR_ID.replace('/', '~');
-    const response = await fetch(
-      `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?timeout=120`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${APIFY_TOKEN}`
-        },
-        body: JSON.stringify(actorInput)
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Apify API returned ${response.status}: ${errorBody}`);
-    }
-
-    return response.json();
+    const run = await apifyClient.actor(APIFY_ACTOR_ID).call(actorInput);
+    const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+    return items;
   } catch (error) {
     console.error('Apify API error:', error.message);
     throw new Error(`Apify scraping failed: ${error.message}`);
