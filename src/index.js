@@ -175,7 +175,7 @@ app.get('/health', (req, res) => {
 // ============================================
 
 // Core search logic (shared by POST and GET)
-async function handleSearch(query, maxResults = 100, since = null) {
+async function handleSearch(query, maxResults = 100, since = null, debug = false) {
   if (!query) {
     throw new Error('Query parameter is required');
   }
@@ -193,6 +193,7 @@ async function handleSearch(query, maxResults = 100, since = null) {
     success: true,
     count: tweets.length,
     tweets: tweets,
+    ...(debug && { rawSample: rawData[0] }),
     query: query,
     scrapedAt: new Date().toISOString()
   };
@@ -219,8 +220,9 @@ app.get('/api/search', async (req, res) => {
     const query = req.query.query;
     const maxResults = parseInt(req.query.maxResults) || 100;
     const since = req.query.since || null;
+    const debug = req.query.debug === 'raw';
 
-    const result = await handleSearch(query, maxResults, since);
+    const result = await handleSearch(query, maxResults, since, debug);
     res.json(result);
   } catch (error) {
     console.error('Search error:', error);
@@ -237,8 +239,9 @@ app.get('/api/search/:query', async (req, res) => {
     const query = decodeURIComponent(req.params.query);
     const maxResults = parseInt(req.query.maxResults) || 100;
     const since = req.query.since || null;
+    const debug = req.query.debug === 'raw';
     
-    const result = await handleSearch(query, maxResults, since);
+    const result = await handleSearch(query, maxResults, since, debug);
     res.json(result);
   } catch (error) {
     console.error('Search error:', error);
